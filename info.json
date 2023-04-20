@@ -1,0 +1,9 @@
+{
+	"name": "pacifactorio",
+	"version": "0.1.0",
+	"title": "Pacifactorio",
+	"author": "Daniel Barton",
+	"factorio_version": "1.1",
+	"dependencies": ["base >= 1.1"],
+	"description": "Alternative resources for the player to deal with biters besides the usual death and carnage."
+}

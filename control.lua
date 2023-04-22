@@ -1,9 +1,7 @@
 
 local function on_new_grenade_hit(event)
-		log("grenade_hit")
 	local target = event.entity
 	if target.force.name == "enemy" then
-		log("on_entity_damaged")
 		target.set_command({
 			type = defines.command.flee,
 			from = event.cause
@@ -25,9 +23,17 @@ end
 
 -- add event handler for new-grenade hits
 script.on_event(defines.events.on_entity_damaged, function(event)
-	if event.damage_type.name == "explosion" and event.original_damage_amount >= 0 then
-		log('damage' .. event.damage_type.name .. event.original_damage_amount)
-		on_new_grenade_hit(event)
+	-- log('hit entity with type ' .. event.entity.type)
+	if event.damage_type.name == "repelling" and event.original_damage_amount >= 0 then
+		log('damage ' .. event.damage_type.name .. ' ' .. event.original_damage_amount)
+		if event.entity.type == "unit" then 
+			on_new_grenade_hit(event)
+		end
+		-- if event.entity.type == "character" then
+			-- will turn off tint permanently ...
+			-- log("hit myself " ..  event.entity.prototype.damage_hit_tint)
+			-- event.entity.prototype.damage_hit_tint = {r=0,g=0,b=0,a=0}
+		-- end
 	end
 end)
 

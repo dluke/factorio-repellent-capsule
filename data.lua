@@ -1,5 +1,9 @@
 -- define new grenade type
 
+local sounds = require ("__base__/prototypes/entity/sounds")
+
+
+
 data:extend(
 {
   {
@@ -7,6 +11,13 @@ data:extend(
     name = "repelling"
   }
 })
+
+-- set the player to be resistant to repelling damage
+-- data.raw["character"]["resistances"] = {repelling = 1.0}
+-- TODO compatibility
+data.raw["character"]["character"]["resistances"] = {{type = "repelling", percent = 100}}
+data.raw["character"]["character"]["damage_hit_tint"] = {r=0, g=0, b=0, a=0}
+
 
 -- helper
 local default_light = function(size)
@@ -19,14 +30,11 @@ local default_light = function(size)
 end
 
 
--- local grenade = table.deepcopy(data.raw["ammo"]["grenade"])
--- grenade.name = "repel-grenade"
-local sounds = require ("__base__/prototypes/entity/sounds")
 
 local repel_capsule = {
 	type = "capsule",
 	name = "repel-capsule",
-	icon = "__base__/graphics/icons/grenade.png",
+	icon = "__pacifactorio__/graphics/icons/fear-capsule.png",
 	icon_size = 64, icon_mipmaps = 4,
 	capsule_action =
 	{
@@ -50,7 +58,6 @@ local repel_capsule = {
 						action_delivery =
 						{
 							type = "projectile",
-							-- projectile = "repel-grenade",
 							projectile = "repel-grenade",
 							starting_speed = 0.3
 						}
@@ -139,7 +146,7 @@ local repel_grenade =
 				{
 					{
 						type = "damage",
-						damage = {amount = 1, type = "explosion"}
+						damage = {amount = 1, type = "repelling"}
 					},
 				}
 			}
@@ -148,7 +155,7 @@ local repel_grenade =
 	light = {intensity = 1.0, size = 8},
 	animation =
 	{
-		filename = "__base__/graphics/entity/grenade/grenade.png",
+		filename = "__pacifactorio__/graphics/entity/fear-capsule.png",
 		draw_as_glow = true,
 		frame_count = 15,
 		line_length = 8,
@@ -157,19 +164,19 @@ local repel_grenade =
 		height = 28,
 		shift = util.by_pixel(1, 1),
 		priority = "high",
-		hr_version =
-		{
-			filename = "__base__/graphics/entity/grenade/hr-grenade.png",
-			draw_as_glow = true,
-			frame_count = 15,
-			line_length = 8,
-			animation_speed = 0.250,
-			width = 48,
-			height = 54,
-			shift = util.by_pixel(0.5, 0.5),
-			priority = "high",
-			scale = 0.5
-		}
+		-- hr_version =
+		-- {
+		-- 	filename = "__base__/graphics/entity/grenade/hr-grenade.png",
+		-- 	draw_as_glow = true,
+		-- 	frame_count = 15,
+		-- 	line_length = 8,
+		-- 	animation_speed = 0.250,
+		-- 	width = 48,
+		-- 	height = 54,
+		-- 	shift = util.by_pixel(0.5, 0.5),
+		-- 	priority = "high",
+		-- 	scale = 0.5
+		-- }
 
 	},
 	shadow =

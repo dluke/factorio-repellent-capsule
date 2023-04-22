@@ -131,7 +131,7 @@ local repel_grenade =
 				target_effects = {
 					{
 						type = "create-entity",
-						entity_name = "capsule-flash"
+						entity_name = "fear-cloud"
 					}
 				}
 			}
@@ -164,20 +164,7 @@ local repel_grenade =
 		height = 28,
 		shift = util.by_pixel(1, 1),
 		priority = "high",
-		-- hr_version =
-		-- {
-		-- 	filename = "__base__/graphics/entity/grenade/hr-grenade.png",
-		-- 	draw_as_glow = true,
-		-- 	frame_count = 15,
-		-- 	line_length = 8,
-		-- 	animation_speed = 0.250,
-		-- 	width = 48,
-		-- 	height = 54,
-		-- 	shift = util.by_pixel(0.5, 0.5),
-		-- 	priority = "high",
-		-- 	scale = 0.5
-		-- }
-
+		-- TODO hr_version?
 	},
 	shadow =
 	{
@@ -206,4 +193,43 @@ local repel_grenade =
 	}
 }
 
-data:extend{repel_capsule, repel_grenade, flash}
+ 
+local fear_cloud = {
+	name = "fear-cloud",
+	type = "smoke-with-trigger",
+	flags = {"not-on-map"},
+	show_when_smoke_off = true,
+	particle_count = 16,
+	particle_spread = { 1.6 * 1.05, 1.6 * 0.6 * 1.05 },
+	particle_distance_scale_factor = 0.5,
+	particle_scale_factor = { 1, 0.707 },
+	wave_speed = { 1/80, 1/60 },
+	wave_distance = { 1.3, 0.2 },
+	spread_duration_variation = 4,
+	particle_duration_variation = 60 * 0.5,
+	render_layer = "object",
+
+	affected_by_wind = false,
+	cyclic = true,
+	fade_in_duration = 1,
+	duration = 1.5 * 60,
+	fade_away_duration = 0.5 * 60,
+	spread_duration = 20,
+	-- color = {r = 0.239, g = 0.875, b = 0.992, a = 0.690}, -- #3ddffdb0,
+	color = {r = 241/255, g = 91/255, b = 1, a = 0.390}, -- #F15BFF
+
+	animation =
+	{
+		width = 152,
+		height = 120,
+		line_length = 5,
+		frame_count = 60,
+		shift = {-0.53125, -0.4375},
+		priority = "high",
+		animation_speed = 1.0,
+		filename = "__base__/graphics/entity/smoke/smoke.png",
+		flags = { "smoke" }
+	}
+}
+
+data:extend{repel_capsule, repel_grenade, flash, fear_cloud}

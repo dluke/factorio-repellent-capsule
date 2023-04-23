@@ -1,8 +1,17 @@
 -- define new grenade type
 
+local util = require("util")
+local smoke_animations = require("__base__/prototypes/entity/smoke-animations")
+
+local smoke_fast_animation = smoke_animations.trivial_smoke_fast
+local trivial_smoke = smoke_animations.trivial_smoke
+
 local sounds = require ("__base__/prototypes/entity/sounds")
 
 
+-- expand the crashed ship container
+local ship_container_size = data.raw["container"]["crash-site-spaceship"].inventory_size
+data.raw["container"]["crash-site-spaceship"].inventory_size = math.max(ship_container_size, 20)
 
 data:extend(
 {
@@ -13,10 +22,8 @@ data:extend(
 })
 
 -- set the player to be resistant to repelling damage
--- data.raw["character"]["resistances"] = {repelling = 1.0}
 -- TODO compatibility
 data.raw["character"]["character"]["resistances"] = {{type = "repelling", percent = 100}}
-data.raw["character"]["character"]["damage_hit_tint"] = {r=0, g=0, b=0, a=0}
 
 
 -- helper
@@ -34,7 +41,7 @@ end
 local repel_capsule = {
 	type = "capsule",
 	name = "repel-capsule",
-	icon = "__pacifactorio__/graphics/icons/fear-capsule.png",
+	icon = "__repellent-capsule__/graphics/icons/fear-capsule.png",
 	icon_size = 64, icon_mipmaps = 4,
 	capsule_action =
 	{
@@ -46,7 +53,7 @@ local repel_capsule = {
 			ammo_category = "grenade",
 			cooldown = 30,
 			projectile_creation_distance = 0.6,
-			range = 15,
+			range = 25,
 			ammo_type =
 			{
 				category = "grenade",
@@ -132,13 +139,18 @@ local repel_grenade =
 					{
 						type = "create-entity",
 						entity_name = "fear-cloud"
+					},
+					{
+						type = "play-sound",
+						sound = sounds.poison_capsule_explosion(0.3)
 					}
 				}
 			}
 		},
 		{
 			type = "area",
-			radius = 6.5,
+			force = "enemy",
+			radius = 12.0,
 			action_delivery =
 			{
 				type = "instant",
@@ -148,6 +160,10 @@ local repel_grenade =
 						type = "damage",
 						damage = {amount = 1, type = "repelling"}
 					},
+					{
+						type = "create-sticker",
+						sticker = "repel-sticker"
+					}
 				}
 			}
 		}
@@ -155,7 +171,7 @@ local repel_grenade =
 	light = {intensity = 1.0, size = 8},
 	animation =
 	{
-		filename = "__pacifactorio__/graphics/entity/fear-capsule.png",
+		filename = "__repellent-capsule__/graphics/entity/fear-capsule.png",
 		draw_as_glow = true,
 		frame_count = 15,
 		line_length = 8,
@@ -193,6 +209,47 @@ local repel_grenade =
 	}
 }
 
+-- smoke_animations.trivial_smoke_fast = function(opts)
+--   local opts = opts or {}
+--   return
+--   {
+--     filename = "__base__/graphics/entity/smoke-fast/smoke-fast.png",
+--     priority = "high",
+--     width = 50,
+--     height = 50,
+--     frame_count = 16,
+--     animation_speed = opts.animation_speed or 16 / 60,
+--     scale = opts.scale,
+--     tint = opts.tint
+--   }
+-- end
+
+
+
+local fear_trail = {
+	name = "fear-trail",
+	type = "smoke-with-trigger",
+	flags = {"not-on-map"},
+	show_when_smoke_off = true,
+	affected_by_wind = false,
+	cyclic = true,
+	duration = 20 * 60,
+	fade_in_duration = 1,
+	fade_away_duration = 1,
+	color = {r = 241/255, g = 91/255, b = 1, a = 0.590}, -- #F15BFF
+	animation = 
+	{
+    filename = "__base__/graphics/entity/smoke-fast/smoke-fast.png",
+    priority = "high",
+    width = 50,
+    height = 50,
+    frame_count = 16,
+    animation_speed = 16 / 60,
+    scale = 1.0,
+    tint = {r = 1, g = 1, b = 1, a = 1}
+  }
+}
+
  
 local fear_cloud = {
 	name = "fear-cloud",
@@ -216,7 +273,7 @@ local fear_cloud = {
 	fade_away_duration = 0.5 * 60,
 	spread_duration = 20,
 	-- color = {r = 0.239, g = 0.875, b = 0.992, a = 0.690}, -- #3ddffdb0,
-	color = {r = 241/255, g = 91/255, b = 1, a = 0.390}, -- #F15BFF
+	color = {r = 241/255, g = 91/255, b = 1, a = 0.590}, -- #F15BFF
 
 	animation =
 	{
@@ -232,4 +289,63 @@ local fear_cloud = {
 	}
 }
 
-data:extend{repel_capsule, repel_grenade, flash, fear_cloud}
+local fear_sticker = {
+	type = "sticker",
+	name = "repel-sticker",
+	flags = {},
+	animation =
+	{
+		filename = "__base__/graphics/entity/slowdown-sticker/slowdown-sticker.png",
+		priority = "extra-high",
+		line_length = 5,
+		width = 22,
+		height = 24,
+		frame_count = 50,
+		animation_speed = 0.5,
+		tint = {r = 1.000, g = 0.663, b = 0.000, a = 0.694}, -- #ffa900b1
+		shift = util.by_pixel (2,-1),
+		hr_version =
+		{
+			filename = "__base__/graphics/entity/slowdown-sticker/hr-slowdown-sticker.png",
+			line_length = 5,
+			width = 42,
+			height = 48,
+			frame_count = 50,
+			animation_speed = 0.5,
+			tint = {r = 241/255, g = 91/255, b = 1, a = 0.590}, -- #F15BFF
+			shift = util.by_pixel(2, -0.5),
+			scale = 0.5
+		}
+	},
+	duration_in_ticks = 10 * 60,
+	target_movement_modifier = 0.9
+}
+
+data:extend{
+	repel_capsule, 
+	repel_grenade, 
+	flash, 
+	fear_cloud,
+	fear_trail,
+	fear_sticker
+}
+
+data:extend{
+	{
+		type = "recipe",
+		name = "repel-capsule",
+		enabled = true,
+		energy_required = 8,
+		ingredients =
+		{
+			{"steel-plate", 2},
+			{"electronic-circuit", 3},
+			{"sulfur", 5}
+		},
+		result = "repel-capsule"
+	}
+}
+
+-- add this recipe to an existing technology
+
+table.insert(data.raw["technology"]["military-3"]["effects"], {recipe = "repel-capsule", type="unlock-recipe"})

@@ -1,9 +1,9 @@
 {
-	"name": "pacifactorio",
+	"name": "repellent-capsule",
 	"version": "0.1.0",
-	"title": "Pacifactorio",
+	"title": "Repellent Capsule",
 	"author": "Daniel Barton",
 	"factorio_version": "1.1",
 	"dependencies": ["base >= 1.1"],
-	"description": "Alternative resources for the player to deal with biters besides the usual death and carnage."
+	"description": "Make biters flee in terror with this throwable capsule"
 }

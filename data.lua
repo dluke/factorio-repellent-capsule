@@ -320,7 +320,7 @@ local fear_sticker = {
 		}
 	},
 	duration_in_ticks = 10 * 60,
-	target_movement_modifier = 0.9
+	target_movement_modifier = 1.1
 }
 
 

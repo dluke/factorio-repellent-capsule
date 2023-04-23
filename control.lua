@@ -21,7 +21,7 @@ local function on_new_grenade_hit(event)
 	else
 		target.set_command({
 			type = defines.command.compound,
-			structure_type = defines.compound_command.return_last,
+			structure_type = defines.compound_command.logical_or,
 			commands = {
 				{
 					type = defines.command.flee,

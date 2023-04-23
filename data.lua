@@ -1,12 +1,14 @@
 -- define new grenade type
 
+require("particles")
+
 local util = require("util")
+local sounds = require ("__base__/prototypes/entity/sounds")
 local smoke_animations = require("__base__/prototypes/entity/smoke-animations")
 
 local smoke_fast_animation = smoke_animations.trivial_smoke_fast
 local trivial_smoke = smoke_animations.trivial_smoke
 
-local sounds = require ("__base__/prototypes/entity/sounds")
 
 
 -- expand the crashed ship container
@@ -133,12 +135,26 @@ local repel_grenade =
 	action = {
 		{
 			type = 'direct',
-			action_delivery = { 
+			action_delivery = 
+			{ 
 				type = "instant",
-				target_effects = {
+				target_effects = 
+				{
+					-- {
+					-- 	type = "create-entity",
+					-- 	entity_name = "fear-cloud"
+					-- },
 					{
-						type = "create-entity",
-						entity_name = "fear-cloud"
+						type = "create-particle",
+						repeat_count = 40,
+            particle_name = "repel-smoke-particle",
+            -- particle_name = "explosion-stone-particle-medium",
+            initial_height = 0.1,
+            speed_from_center = 0.12,
+            speed_from_center_deviation = 0.20,
+						-- frame_speed_deviation = -0.1,
+            initial_vertical_speed = 0.00,
+            offset_deviation = { { -0.8984, -0.5 }, { 0.8984, 0.5 } }
 					},
 					{
 						type = "play-sound",
@@ -209,21 +225,6 @@ local repel_grenade =
 	}
 }
 
--- smoke_animations.trivial_smoke_fast = function(opts)
---   local opts = opts or {}
---   return
---   {
---     filename = "__base__/graphics/entity/smoke-fast/smoke-fast.png",
---     priority = "high",
---     width = 50,
---     height = 50,
---     frame_count = 16,
---     animation_speed = opts.animation_speed or 16 / 60,
---     scale = opts.scale,
---     tint = opts.tint
---   }
--- end
-
 
 
 local fear_trail = {
@@ -265,6 +266,7 @@ local fear_cloud = {
 	spread_duration_variation = 4,
 	particle_duration_variation = 60 * 0.5,
 	render_layer = "object",
+	speed_from_center = 1.0,
 
 	affected_by_wind = false,
 	cyclic = true,
@@ -321,13 +323,16 @@ local fear_sticker = {
 	target_movement_modifier = 0.9
 }
 
+
+
 data:extend{
 	repel_capsule, 
 	repel_grenade, 
 	flash, 
 	fear_cloud,
 	fear_trail,
-	fear_sticker
+	fear_sticker,
+	repel_smoke_particle
 }
 
 data:extend{

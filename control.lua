@@ -1,4 +1,6 @@
 
+local inspect = require("inspect")
+
 local math2d = require("math2d")
 
 function init_repellent()
@@ -115,11 +117,12 @@ local function flee_from_cause(cause, entity, flee_distance)
 	return command
 end
 
-local function on_new_grenade_hit(event)
+local function on_grenade_hit(event)
 	local target = event.entity
 	if target.force.name ~= "enemy" then
 		return
 	end
+	log('unit_group' .. inspect(target.unit_group))
 	increment_repel_count(target)
 
 	if global.repel_count[target.unit_number] >= global.repel_resistance[target.unit_number] then
@@ -163,6 +166,12 @@ local function on_new_grenade_hit(event)
 
 end
 
+local function find_spawner(entity)
+	-- TODO efficiency
+	return entity.surface.find_entities_filtered({type="unit-spawner"})[1]
+end
+
+
 script.on_event(defines.events.on_ai_command_completed, function(event)
 	-- log("ai command of unit " .. event.unit_number .. " completed")
 	local unit_number = event.unit_number
@@ -170,9 +179,21 @@ script.on_event(defines.events.on_ai_command_completed, function(event)
 		global.shivered[unit_number] = nil
 		return
 	end
-	if global.feared[unit_number] then
+
+
+	if global.feared[unit_number] ~= nil then
 		local entity = global.feared[unit_number]
-		global.postpone[entity] = true
+		local spawner = entity.spawner or find_spawner(entity)
+		if entity.valid and spawner then
+			log('go to location' .. spawner.position.x .. ' ' ..spawner.position.y)
+			entity.set_command({
+				type = defines.command.go_to_location,
+				radius = 5,
+				destination_entity = spawner,
+				distraction = defines.distraction.none,
+				pathfind_flags = {allow_destroy_friendly_entities = true, allow_paths_through_own_entities = true}
+			})
+		end
 		-- handle debuff
 		if entity.stickers then
 			for i = #entity.stickers, 1, -1 do
@@ -182,7 +203,8 @@ script.on_event(defines.events.on_ai_command_completed, function(event)
 				end
 			end
 		end
-		table.remove(global.feared, unit_number)
+		global.feared[unit_number] = nil
+		-- table.remove(global.feared, unit_number)
 	end
 end)
 
@@ -191,30 +213,13 @@ script.on_event(defines.events.on_entity_damaged, function(event)
 	if event.damage_type.name == "repelling" and event.original_damage_amount >= 0 then
 		-- log('damage ' .. event.damage_type.name .. ' ' .. event.original_damage_amount)
 		if event.entity.type == "unit" then 
-			on_new_grenade_hit(event)
+			on_grenade_hit(event)
 		end
 	end
 end)
 
-local function find_spawner(entity)
-	-- TODO efficiency
-	return entity.surface.find_entities_filtered({type="unit-spawner"})[1]
-end
-
 
 script.on_event(defines.events.on_tick, function()
-	for entity, _ in pairs(global.postpone) do
-		local spawner = entity.spawner or find_spawner(entity)
-		if entity.valid and spawner then
-			entity.set_command({
-				type = defines.command.go_to_location,
-				destination_entity = spawner,
-				distraction = defines.distraction.by_damage
-			})
-		end
-		global.postpone[entity] = nil
-	end
-
 	local tick = game.tick
 	if tick % 2 == 0 then
 		update_shivering()

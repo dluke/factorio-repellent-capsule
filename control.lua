@@ -1,13 +1,19 @@
 
 local inspect = require("inspect")
-
 local math2d = require("math2d")
+
+local DEBUG = false
+function debug(string) 
+	if DEBUG then
+		log(string)
+	end
+end
+
 
 function init_repellent()
 	-- keep track of biters affected by the fear debuff
 	global.feared = {}
-	global.repel_count = {}
-	global.repel_resistance = {}
+	global.biter_data = {}
 	-- global.postpone = {}
 	global.shivered = {}
 	global.shivered_toggle = {}
@@ -23,7 +29,7 @@ script.on_init(function()
 		if remote.interfaces["freeplay"] then
 			if not settings.startup['disable-crashsite'].value then 
 				local ship_items = remote.call("freeplay", "get_ship_items")
-				ship_items["repel-capsule"] = 28
+				ship_items["repel-capsule"] = 58
 				ship_items["poison-capsule"] = 16
 				ship_items["slowdown-capsule"] = 25
 				ship_items["grenade"] = 10
@@ -61,14 +67,22 @@ end
 
 
 local function increment_repel_count(entity)
-	if global.repel_count[entity.unit_number] == nil then
-		global.repel_resistance[entity.unit_number] = draw_resistance(entity)
-		-- log('resistance value ' .. global.repel_resistance[entity.unit_number])
-		global.repel_count[entity.unit_number] = 1
+	local feared = global.feared[entity.unit_number]
+	if feared == nil then
+		global.feared[entity.unit_number] = {entity = entity, repel_count = 1, repel_resistance = draw_resistance(entity)}
 	else
-		global.repel_count[entity.unit_number] = global.repel_count[entity.unit_number] + 1
+		feared.repel_count = feared.repel_count + 1
 	end
 end
+
+script.on_event(defines.events.on_entity_spawned, function(event)
+	-- keep track of the spawner for all the entities
+	-- !shouldn't be needed
+	if global.biter_data == nil then
+		global.biter_data = {}
+	end
+	global.biter_data[event.entity.unit_number] = {spawner = event.spawner, spawn_position = event.spawner.position}
+end)
 
 -- clean up
 script.on_event(defines.events.on_entity_died, function(event)
@@ -76,10 +90,9 @@ script.on_event(defines.events.on_entity_died, function(event)
 		return
 	end
 	global.feared[event.entity.unit_number] = nil
+	global.biter_data[event.entity.unit_number] = nil
 	global.shivered[event.entity.unit_number] = nil
 	global.shivered_toggle[event.entity.unit_number] = nil
-	global.repel_count[event.entity.unit_number] = nil
-	global.repel_resistance[event.entity.unit_number] = nil
 end)
 
 local function apply_shivered(entity, ticks_to_wait) 
@@ -108,7 +121,6 @@ local function flee_from_cause(cause, entity, flee_distance)
 
 	local target_vector = math2d.position.multiply_scalar(vector, flee_distance / math2d.position.vector_length(vector))
 	local target_destination = math2d.position.add(cause.position, target_vector)
-	-- log('destination ' .. target_destination.x .. ' ' .. target_destination.y)
 	local command = {
 		type = defines.command.go_to_location,
 		destination = target_destination,
@@ -122,10 +134,11 @@ local function on_grenade_hit(event)
 	if target.force.name ~= "enemy" then
 		return
 	end
-	log('unit_group ' .. inspect(target.unit_group))
+	debug('unit_group ' .. inspect(target.unit_group))
 	increment_repel_count(target)
 
-	if global.repel_count[target.unit_number] >= global.repel_resistance[target.unit_number] then
+	local feared = global.feared[target.unit_number]
+	if feared.repel_count >= feared.repel_resistance then
 		target.set_command({
 				type = defines.command.flee,
 				from = event.cause,
@@ -134,22 +147,6 @@ local function on_grenade_hit(event)
 	else
 		apply_shivered(target, 20)
 	end
-	global.feared[target.unit_number] = target
-
-	-- if target.spawner == nil then 
-	-- 	apply_shivered(target)
-	-- else
-	-- 	target.set_command({
-	-- 		type = defines.command.flee,
-	-- 		from = event.cause,
-	-- 		distraction = defines.distraction.none
-	-- 	})
-		-- local flee_distance = 100
-		-- target.set_command({
-		-- 	type = defines.command.compound,
-		-- 	structure_type = defines.compound_command.logical_or,
-		-- 	commands = {
-		-- 		-- target.set_command(flee_from_cause(event.cause, target, flee_distance)),
 		-- 		{
 		-- 			type = defines.command.flee,
 		-- 			from = event.cause,
@@ -159,16 +156,21 @@ local function on_grenade_hit(event)
 		-- 			type = defines.command.go_to_location,
 		-- 			destination_entity = target.spawner,
 		-- 			distraction = defines.distraction.by_damage
-		-- 		}
-		-- 	}
-		-- })
-	-- end
-
 end
 
-local function find_spawner(entity)
-	-- TODO efficiency
-	return entity.surface.find_entities_filtered({type="unit-spawner"})[1]
+local function find_spawn_location(entity)
+	-- return entity.surface.find_entities_filtered({type="unit-spawner"})[1]
+	local data = global.biter_data[entity.unit_number]
+	if data == nil then
+		debug("no biter data")
+		return
+	end
+	if data.spawner.valid then
+		return data.spawner.position
+	else
+		debug('warning: home spawner is invalid')
+		return data.spawn_position
+	end
 end
 
 
@@ -182,14 +184,15 @@ script.on_event(defines.events.on_ai_command_completed, function(event)
 
 
 	if global.feared[unit_number] ~= nil then
-		local entity = global.feared[unit_number]
-		local spawner = entity.spawner or find_spawner(entity)
-		if entity.valid and spawner then
-			log('go to location' .. spawner.position.x .. ' ' ..spawner.position.y)
+		local entity = global.feared[unit_number].entity
+		local location = find_spawn_location(entity)
+		if location then
+			debug('go to location' .. location.x .. ' ' ..location.y)
 			entity.set_command({
 				type = defines.command.go_to_location,
 				radius = 5,
-				destination_entity = spawner,
+				destination = location,
+				-- destination_entity = spawner,
 				distraction = defines.distraction.none,
 				pathfind_flags = {allow_destroy_friendly_entities = true, allow_paths_through_own_entities = true}
 			})
@@ -204,7 +207,6 @@ script.on_event(defines.events.on_ai_command_completed, function(event)
 			end
 		end
 		global.feared[unit_number] = nil
-		-- table.remove(global.feared, unit_number)
 	end
 end)
 
@@ -239,6 +241,7 @@ end
 
 script.on_event(defines.events.on_player_created, function(event)
 	local enemy_force = game.forces["enemy"]
+	-- !tmp
 	enemy_force.evolution_factor = 0.99
 end)
 

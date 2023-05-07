@@ -17,10 +17,10 @@ data.raw["container"]["crash-site-spaceship"].inventory_size = math.max(ship_con
 
 data:extend(
 {
-  {
-    type = "damage-type",
-    name = "repelling"
-  }
+	{
+		type = "damage-type",
+		name = "repelling"
+	}
 })
 
 -- set the player to be resistant to repelling damage
@@ -30,12 +30,12 @@ data.raw["character"]["character"]["resistances"] = {{type = "repelling", percen
 
 -- helper
 local default_light = function(size)
-  return
-  {
-    intensity = 1,
-    size = size,
-    color = {r = 1.0, g = 1.0, b = 1.0}
-  }
+	return
+	{
+		intensity = 1,
+		size = size,
+		color = {r = 1.0, g = 1.0, b = 1.0}
+	}
 end
 
 
@@ -97,15 +97,15 @@ local repel_capsule = {
 
 capsule_smoke =
 {
-  {
-    name = "smoke-fast",
-    deviation = {0.15, 0.15},
-    frequency = 1,
-    position = {0, 0},
-    starting_frame = 3,
-    starting_frame_deviation = 5,
-    starting_frame_speed_deviation = 5
-  }
+	{
+		name = "smoke-fast",
+		deviation = {0.15, 0.15},
+		frequency = 1,
+		position = {0, 0},
+		starting_frame = 3,
+		starting_frame_deviation = 5,
+		starting_frame_speed_deviation = 5
+	}
 }
 
 local flash = {
@@ -147,14 +147,14 @@ local repel_grenade =
 					{
 						type = "create-particle",
 						repeat_count = 40,
-            particle_name = "repel-smoke-particle",
-            -- particle_name = "explosion-stone-particle-medium",
-            initial_height = 0.1,
-            speed_from_center = 0.14,
-            speed_from_center_deviation = 0.20,
+						particle_name = "repel-smoke-particle",
+						-- particle_name = "explosion-stone-particle-medium",
+						initial_height = 0.1,
+						speed_from_center = 0.14,
+						speed_from_center_deviation = 0.20,
 						-- frame_speed_deviation = -0.1,
-            initial_vertical_speed = 0.00,
-            offset_deviation = { { -0.8984, -0.5 }, { 0.8984, 0.5 } }
+						initial_vertical_speed = 0.00,
+						offset_deviation = { { -0.8984, -0.5 }, { 0.8984, 0.5 } }
 					},
 					{
 						type = "play-sound",
@@ -240,15 +240,15 @@ local fear_trail = {
 	color = {r = 241/255, g = 91/255, b = 1, a = 0.590}, -- #F15BFF
 	animation = 
 	{
-    filename = "__base__/graphics/entity/smoke-fast/smoke-fast.png",
-    priority = "high",
-    width = 50,
-    height = 50,
-    frame_count = 16,
-    animation_speed = 16 / 60,
-    scale = 1.0,
-    tint = {r = 1, g = 1, b = 1, a = 1}
-  }
+		filename = "__base__/graphics/entity/smoke-fast/smoke-fast.png",
+		priority = "high",
+		width = 50,
+		height = 50,
+		frame_count = 16,
+		animation_speed = 16 / 60,
+		scale = 1.0,
+		tint = {r = 1, g = 1, b = 1, a = 1}
+	}
 }
 
  

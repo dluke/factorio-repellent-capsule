@@ -6,12 +6,12 @@ local math2d = require("math2d")
 function init_repellent()
 	-- keep track of biters affected by the fear debuff
 	global.feared = {}
-	global.postpone = {}
+	global.repel_count = {}
+	global.repel_resistance = {}
+	-- global.postpone = {}
 	global.shivered = {}
 	global.shivered_toggle = {}
 	-- global.feared_indicator = {}
-	global.repel_count = {}
-	global.repel_resistance = {}
 end
 
 
@@ -122,7 +122,7 @@ local function on_grenade_hit(event)
 	if target.force.name ~= "enemy" then
 		return
 	end
-	log('unit_group' .. inspect(target.unit_group))
+	log('unit_group ' .. inspect(target.unit_group))
 	increment_repel_count(target)
 
 	if global.repel_count[target.unit_number] >= global.repel_resistance[target.unit_number] then

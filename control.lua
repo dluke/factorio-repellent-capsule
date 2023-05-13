@@ -1,4 +1,7 @@
 
+
+local FLEE_ONLY = true
+
 local inspect = require("inspect")
 local math2d = require("math2d")
 
@@ -14,10 +17,8 @@ function init_repellent()
 	-- keep track of biters affected by the fear debuff
 	global.feared = {}
 	global.biter_data = {}
-	-- global.postpone = {}
 	global.shivered = {}
 	global.shivered_toggle = {}
-	-- global.feared_indicator = {}
 end
 
 
@@ -39,14 +40,6 @@ script.on_init(function()
 	end
 
 end)
-
-
--- testing forces
--- script.on_event(defines.events.on_force_created, function(event)
--- 	log("create force: " .. event.force)
--- end)
-
-
 
 local repellent_resistance_table = {
 	["small-biter"] = {{1.0, 1}},
@@ -127,21 +120,6 @@ local function update_shivering()
 	end
 end
 
--- !implement flee ourselves
--- !not used
-local function flee_from_cause(cause, entity, flee_distance) 
-	local vector = math2d.position.subtract(cause.position, entity.position)
-
-	local target_vector = math2d.position.multiply_scalar(vector, flee_distance / math2d.position.vector_length(vector))
-	local target_destination = math2d.position.add(cause.position, target_vector)
-	local command = {
-		type = defines.command.go_to_location,
-		destination = target_destination,
-		distraction = defines.distraction.none
-	}
-	return command
-end
-
 local function on_grenade_hit(event)
 	local target = event.entity
 	if target.force.name ~= "enemy" then
@@ -160,15 +138,6 @@ local function on_grenade_hit(event)
 	else
 		apply_shivered(target, 20)
 	end
-		-- 		{
-		-- 			type = defines.command.flee,
-		-- 			from = event.cause,
-		-- 			distraction = defines.distraction.none
-		-- 		},
-		-- 		{
-		-- 			type = defines.command.go_to_location,
-		-- 			destination_entity = target.spawner,
-		-- 			distraction = defines.distraction.by_damage
 end
 
 local function find_spawn_location(entity)
@@ -199,51 +168,52 @@ script.on_event(defines.events.on_ai_command_completed, function(event)
 	end
 
 	local data = global.biter_data[unit_number]
-	local DESPAWN_RADIUS = 5
-	if data.return_to_spawner ~= nil then
-		local entity = data.entity
-		-- ! complete return command -- if already units nearby, despawn
-		local biters = entity.surface.find_entities_filtered({type = "unit", force = "enemy", area = get_area_at(entity.position, DESPAWN_RADIUS)})
-		-- TODO if biters don't despawn their AI sometimes gets stuck -- can I delete them and force the spawner to spawn one?
-		if #biters > 0 then
-			_destroy_biter_data(data.entity)
-			data.entity.destroy()
-		end
-		-- ! otherwise do not despawn
+	if data == nil then return end
 
-	elseif global.feared[unit_number] ~= nil then
-		-- ! completed fear command
-		local entity = global.feared[unit_number].entity
-		local location = find_spawn_location(entity)
-		if location then
-			debug('go to location' .. location.x .. ' ' ..location.y)
-			entity.set_command({
-				type = defines.command.go_to_location,
-				radius = 6,
-				destination = location,
-				-- destination_entity = spawner,
-				distraction = defines.distraction.none,
-				pathfind_flags = {allow_destroy_friendly_entities = false, allow_paths_through_own_entities = false}
-			})
-			global.biter_data[unit_number].return_to_spawner = true
-		end
-		-- handle debuff
-		if entity.stickers then
-			for i = #entity.stickers, 1, -1 do
-				if entity.stickers[i].name == "repel-sticker" then
-					local sticker = table.remove(entity.stickers, i)
-					sticker.destroy()
-				end
+	local entity = data.entity
+	if entity.stickers then
+		for i = #entity.stickers, 1, -1 do
+			if entity.stickers[i].name == "repel-sticker" then
+				local sticker = table.remove(entity.stickers, i)
+				sticker.destroy()
 			end
 		end
 		global.feared[unit_number] = nil
+	end
+
+	if not FLEE_ONLY then
+		local DESPAWN_RADIUS = 5
+		if data.return_to_spawner ~= nil then
+			-- ! complete return command -- if already units nearby, despawn
+			local biters = entity.surface.find_entities_filtered({type = "unit", force = "enemy", area = get_area_at(entity.position, DESPAWN_RADIUS)})
+			-- TODO if biters don't despawn their AI sometimes gets stuck -- can I delete them and force the spawner to spawn one?
+			if #biters > 0 then
+				_destroy_biter_data(data.entity)
+				data.entity.destroy()
+			end
+			-- ! otherwise do not despawn
+		elseif global.feared[unit_number] ~= nil then
+			-- ! completed fear command
+			local location = find_spawn_location(entity)
+			if location then
+				debug('go to location' .. location.x .. ' ' ..location.y)
+				entity.set_command({
+					type = defines.command.go_to_location,
+					radius = 6,
+					destination = location,
+					-- destination_entity = spawner,
+					distraction = defines.distraction.none,
+					pathfind_flags = {allow_destroy_friendly_entities = false, allow_paths_through_own_entities = false}
+				})
+				global.biter_data[unit_number].return_to_spawner = true
+			end
+		end
 	end
 end)
 
 
 script.on_event(defines.events.on_entity_damaged, function(event)
 	if event.damage_type.name == "repelling" and event.original_damage_amount >= 0 then
-		-- log('damage ' .. event.damage_type.name .. ' ' .. event.original_damage_amount)
 		if event.entity.type == "unit" then 
 			on_grenade_hit(event)
 		end
@@ -257,31 +227,13 @@ script.on_event(defines.events.on_tick, function()
 		update_shivering()
 	end
 
-	-- if tick % 60 == 0 then
-	-- 	for key, force in pairs(game.forces) do
-	-- 		log(key .. ' ' .. force.name)
-	-- 	end
-	-- end
-	-- game.forces['enemy'].set_friend(game.forces['player'], true)
-
 end)
-
-
 
 -- for testing ---
 
-function insert_capsule_pack(cache) 
-	cache.insert({name = "repel-capsule", count = 26})
-	cache.insert({name = "poison-capsule", count = 16})
-	cache.insert({name = "slowdown-capsule", count = 25})
-	cache.insert({name = "grenade", count = 10})
-end
-
-script.on_event(defines.events.on_player_created, function(event)
-	local enemy_force = game.forces["enemy"]
-	-- !tmp
-	enemy_force.evolution_factor = 0.99
-
-	
-end)
+-- script.on_event(defines.events.on_player_created, function(event)
+-- 	local enemy_force = game.forces["enemy"]
+-- 	-- !tmp
+-- 	enemy_force.evolution_factor = 0.99
+-- end)
 

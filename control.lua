@@ -37,7 +37,16 @@ script.on_init(function()
 			end
 		end
 	end
+
 end)
+
+
+-- testing forces
+-- script.on_event(defines.events.on_force_created, function(event)
+-- 	log("create force: " .. event.force)
+-- end)
+
+
 
 local repellent_resistance_table = {
 	["small-biter"] = {{1.0, 1}},
@@ -76,24 +85,28 @@ local function increment_repel_count(entity)
 end
 
 script.on_event(defines.events.on_entity_spawned, function(event)
-	-- keep track of the spawner for all the entities
-	-- !shouldn't be needed
+	-- this check is needed because on_entity_spawned is called before on_init
 	if global.biter_data == nil then
 		global.biter_data = {}
 	end
-	global.biter_data[event.entity.unit_number] = {spawner = event.spawner, spawn_position = event.spawner.position}
+	global.biter_data[event.entity.unit_number] = {entity = event.entity, spawner = event.spawner, spawn_position = event.spawner.position}
 end)
+
+function _destroy_biter_data(entity)
+	global.feared[entity.unit_number] = nil
+	global.biter_data[entity.unit_number] = nil
+	global.shivered[entity.unit_number] = nil
+	global.shivered_toggle[entity.unit_number] = nil
+end
 
 -- clean up
 script.on_event(defines.events.on_entity_died, function(event)
 	if not event.entity.unit_number then
 		return
 	end
-	global.feared[event.entity.unit_number] = nil
-	global.biter_data[event.entity.unit_number] = nil
-	global.shivered[event.entity.unit_number] = nil
-	global.shivered_toggle[event.entity.unit_number] = nil
+	_destroy_biter_data(event.entity)
 end)
+
 
 local function apply_shivered(entity, ticks_to_wait) 
 	global.shivered[entity.unit_number] = entity
@@ -173,6 +186,9 @@ local function find_spawn_location(entity)
 	end
 end
 
+function get_area_at(position, r)
+	return {{position.x-r, position.y-r}, {position.x+r, position.y+r}}
+end
 
 script.on_event(defines.events.on_ai_command_completed, function(event)
 	-- log("ai command of unit " .. event.unit_number .. " completed")
@@ -182,20 +198,34 @@ script.on_event(defines.events.on_ai_command_completed, function(event)
 		return
 	end
 
+	local data = global.biter_data[unit_number]
+	local DESPAWN_RADIUS = 5
+	if data.return_to_spawner ~= nil then
+		local entity = data.entity
+		-- ! complete return command -- if already units nearby, despawn
+		local biters = entity.surface.find_entities_filtered({type = "unit", force = "enemy", area = get_area_at(entity.position, DESPAWN_RADIUS)})
+		-- TODO if biters don't despawn their AI sometimes gets stuck -- can I delete them and force the spawner to spawn one?
+		if #biters > 0 then
+			_destroy_biter_data(data.entity)
+			data.entity.destroy()
+		end
+		-- ! otherwise do not despawn
 
-	if global.feared[unit_number] ~= nil then
+	elseif global.feared[unit_number] ~= nil then
+		-- ! completed fear command
 		local entity = global.feared[unit_number].entity
 		local location = find_spawn_location(entity)
 		if location then
 			debug('go to location' .. location.x .. ' ' ..location.y)
 			entity.set_command({
 				type = defines.command.go_to_location,
-				radius = 5,
+				radius = 6,
 				destination = location,
 				-- destination_entity = spawner,
 				distraction = defines.distraction.none,
-				pathfind_flags = {allow_destroy_friendly_entities = true, allow_paths_through_own_entities = true}
+				pathfind_flags = {allow_destroy_friendly_entities = false, allow_paths_through_own_entities = false}
 			})
+			global.biter_data[unit_number].return_to_spawner = true
 		end
 		-- handle debuff
 		if entity.stickers then
@@ -226,6 +256,14 @@ script.on_event(defines.events.on_tick, function()
 	if tick % 2 == 0 then
 		update_shivering()
 	end
+
+	-- if tick % 60 == 0 then
+	-- 	for key, force in pairs(game.forces) do
+	-- 		log(key .. ' ' .. force.name)
+	-- 	end
+	-- end
+	-- game.forces['enemy'].set_friend(game.forces['player'], true)
+
 end)
 
 
@@ -243,5 +281,7 @@ script.on_event(defines.events.on_player_created, function(event)
 	local enemy_force = game.forces["enemy"]
 	-- !tmp
 	enemy_force.evolution_factor = 0.99
+
+	
 end)
 

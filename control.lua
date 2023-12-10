@@ -28,7 +28,7 @@ script.on_init(function()
 	-- init grenade cache
 	if settings.startup["grenade-cache"] then 
 		if remote.interfaces["freeplay"] then
-			if not settings.startup['disable-crashsite'].value then 
+			if settings.startup['disable-crashsite'] ~= nil and not settings.startup['disable-crashsite'].value then 
 				local ship_items = remote.call("freeplay", "get_ship_items")
 				ship_items["repel-capsule"] = 58
 				ship_items["poison-capsule"] = 16
